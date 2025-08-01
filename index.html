@@ -71,9 +71,45 @@
 
     #mainContainer {
       display: flex;
+      flex-direction: row; /* پیش‌فرض: افقی برای لپ‌تاپ/پی‌سی */
       height: 100vh;
       width: 100vw;
       transition: all 0.3s ease;
+    }
+
+    /* برای موبایل: چیدمان عمودی */
+    @media screen and (max-width: 768px) {
+      #mainContainer {
+        flex-direction: column; /* عمودی برای موبایل */
+      }
+      #historySidebar {
+        width: 100%; /* تمام‌صفحه در موبایل */
+        min-width: unset;
+        max-width: unset;
+        height: auto; /* ارتفاع خودکار */
+        border-left: none;
+        border-bottom: 1px solid #333;
+      }
+      #chatSection {
+        flex: 1;
+        margin: 5px 0; /* حاشیه کمتر برای موبایل */
+      }
+    }
+
+    /* برای لپ‌تاپ/پی‌سی: چیدمان افقی (حالت پیش‌فرض) */
+    @media screen and (min-width: 769px) {
+      #mainContainer {
+        flex-direction: row; /* افقی برای لپ‌تاپ/پی‌سی */
+      }
+      #historySidebar {
+        width: 300px; /* عرض ثابت برای سایدبار */
+        min-width: 200px;
+        max-width: 400px;
+        border-left: 1px solid #333;
+      }
+      #chatSection {
+        margin: 5px;
+      }
     }
 
     #chatSection {
@@ -82,7 +118,6 @@
       flex-direction: column;
       background: var(--chat-bg);
       border-radius: 10px;
-      margin: 5px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
       transition: margin 0.3s ease;
     }
@@ -301,16 +336,12 @@
     }
 
     #historySidebar {
-      width: 300px;
       background: var(--sidebar-bg);
       color: var(--text-color);
       padding: 20px;
       overflow-y: auto;
-      border-left: 1px solid #333;
       transition: width 0.3s ease;
       resize: horizontal;
-      min-width: 200px;
-      max-width: 400px;
     }
 
     #historySidebar h3 {
@@ -471,7 +502,6 @@
   </style>
 </head>
 <body>
-
 <canvas id="canvasBg"></canvas>
 <div id="overlay"></div>
 <div id="settingsModal">
@@ -971,7 +1001,7 @@
 
     // Check for predefined question
     if (message.trim() === "توسط چه کسی ساخته شدی") {
-      const reply = "من توسط راد مهر محمدی به شماره تلفن 09173067537 ساخته شدم 😎";
+      const reply = "من توسط رادمهر محمدی به شماره تلفن 09173067537 ساخته شدم 😎";
       conv.messages.push({ role: "assistant", content: reply, timestamp: new Date().toLocaleString('fa-IR') });
       await appendMessage("bot", reply);
       updateDocument();
@@ -1209,6 +1239,5 @@
     }
   });
 </script>
-
 </body>
 </html>
