@@ -100,6 +100,13 @@
       #chat {
         max-height: calc(65vh - 120px);
       }
+      #suggestions {
+        order: 2;
+        margin-top: 10px;
+      }
+      #inputBox {
+        order: 3;
+      }
     }
 
     @media screen and (min-width: 769px) {
@@ -297,7 +304,7 @@
       gap: 5px;
     }
 
-    .copy-btn, .preview-btn {
+    .copy-btn, .preview-btn, .download-btn {
       background: #444;
       color: #fff;
       font-size: 12px;
@@ -308,7 +315,7 @@
       transition: background 0.3s ease;
     }
 
-    .copy-btn:hover, .preview-btn:hover { background: #555; }
+    .copy-btn:hover, .preview-btn:hover, .download-btn:hover { background: #555; }
 
     #previewModal {
       display: none;
@@ -597,6 +604,7 @@
     let editingMessageIndex = null;
     let isTyping = false;
     let speechEnabled = localStorage.getItem("radbot-speech") === 'true';
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
     const translations = {
       fa: {
@@ -618,12 +626,14 @@
         speechEnabled: "فعال‌سازی گفتار:",
         save: "ذخیره",
         close: "بستن",
-        error: "خطایی رخ داد. لطفاً دوباره امتحان کنید.",
-        offline: "حالت آفلاین: پاسخ‌ها از مدل محلی تولید می‌شوند.",
+        error: "خطایی رخ داد. لطفاً دوباره امتحان کنید یا اتصال اینترنت خود را بررسی کنید.",
+        offline: "حالت آفلاین: لطفاً به اینترنت متصل شوید.",
         edit: "ویرایش",
         copy: "کپی",
         preview: "پیش‌نمایش",
-        speak: "پخش صوتی"
+        download: "دانلود",
+        speak: "پخش صوتی",
+        codeDescription: "توضیحات کد:"
       },
       en: {
         welcome: "Hello! I'm RadBot. You can type a message or listen to responses.",
@@ -644,12 +654,14 @@
         speechEnabled: "Enable Speech:",
         save: "Save",
         close: "Close",
-        error: "An error occurred. Please try again.",
-        offline: "Offline mode: Responses are generated from a local model.",
+        error: "An error occurred. Please try again or check your internet connection.",
+        offline: "Offline mode: Please connect to the internet.",
         edit: "Edit",
         copy: "Copy",
         preview: "Preview",
-        speak: "Play Audio"
+        download: "Download",
+        speak: "Play Audio",
+        codeDescription: "Code description:"
       }
     };
 
@@ -657,6 +669,10 @@
 
     function initCanvasBg() {
       const canvas = document.getElementById('canvasBg');
+      if (!canvas) {
+        console.error('Canvas element not found');
+        return;
+      }
       const ctx = canvas.getContext('2d');
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -690,6 +706,11 @@
     }
 
     async function initOfflineModel() {
+      if (isMobile) {
+        console.log('Offline model disabled on mobile devices');
+        appendMessage("bot", `<div class="error-message">مدل آفلاین در دستگاه‌های موبایل غیرفعال است. لطفاً به اینترنت متصل شوید.</div>`, true);
+        return;
+      }
       try {
         const { pipeline } = await import('@xenova/transformers');
         offlineModel = await pipeline('text-generation', 'distilgpt2');
@@ -702,8 +723,14 @@
     }
 
     function setInputState(enabled) {
-      document.getElementById("input").disabled = !enabled;
-      document.getElementById("sendBtn").disabled = !enabled;
+      const input = document.getElementById("input");
+      const sendBtn = document.getElementById("sendBtn");
+      if (input && sendBtn) {
+        input.disabled = !enabled;
+        sendBtn.disabled = !enabled;
+      } else {
+        console.error('Input or send button not found');
+      }
     }
 
     function speakText(text) {
@@ -716,10 +743,11 @@
       window.speechSynthesis.speak(utterance);
     }
 
-    async function appendMessage(role, text, instant = false, timestamp = new Date().toLocaleString('fa-IR', { hour: '2-digit', minute: '2-digit' }), index = null) {
+    async function appendMessage(role, text, instant = isMobile, timestamp = new Date().toLocaleString('fa-IR', { hour: '2-digit', minute: '2-digit' }), index = null) {
       const chat = document.getElementById("chat");
       if (!chat) {
         console.error('Chat element not found');
+        appendMessage("bot", `<div class="error-message">خطای رندر: المان چت یافت نشد.</div>`, true);
         return;
       }
 
@@ -733,9 +761,10 @@
       const copyBtn = document.createElement("button");
       copyBtn.textContent = translations[currentLanguage].copy;
       copyBtn.onclick = () => {
-        navigator.clipboard.writeText(text);
-        copyBtn.textContent = "✅";
-        setTimeout(() => copyBtn.textContent = translations[currentLanguage].copy, 2000);
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = "✅";
+          setTimeout(() => copyBtn.textContent = translations[currentLanguage].copy, 2000);
+        }).catch(err => console.error('Copy failed:', err));
       };
       actions.appendChild(copyBtn);
 
@@ -757,12 +786,14 @@
       chat.appendChild(msg);
 
       const blocks = splitByCodeBlocks(text);
-      isTyping = !instant && !/Mobi|Android/i.test(navigator.userAgent);
+      isTyping = !instant;
       if (role === "bot") {
-        document.getElementById("stopBtn").style.display = isTyping ? "block" : "none";
+        const stopBtn = document.getElementById("stopBtn");
+        if (stopBtn) stopBtn.style.display = isTyping ? "block" : "none";
       }
 
-      for (const block of blocks) {
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
         if (block.type === "text") {
           const markdownDiv = document.createElement("div");
           markdownDiv.className = "markdown-body";
@@ -771,8 +802,8 @@
             msg.appendChild(markdownDiv);
           } else {
             const text = block.content;
-            for (let i = 0; i < text.length && isTyping; i++) {
-              markdownDiv.innerHTML = marked.parse(text.slice(0, i + 1));
+            for (let j = 0; j < text.length && isTyping; j++) {
+              markdownDiv.innerHTML = marked.parse(text.slice(0, j + 1));
               msg.appendChild(markdownDiv);
               await delay(15);
               if (chat) chat.scrollTop = chat.scrollHeight;
@@ -781,19 +812,28 @@
               markdownDiv.innerHTML = marked.parse(block.content);
             }
           }
+          if (i + 1 < blocks.length && blocks[i + 1].type === "code") {
+            const descDiv = document.createElement("div");
+            descDiv.className = "markdown-body";
+            descDiv.innerHTML = marked.parse(`**${translations[currentLanguage].codeDescription}** ${block.content.trim()}`);
+            chat.appendChild(descDiv);
+            await delay(300);
+          }
         } else if (block.type === "code") {
           const pre = document.createElement("pre");
           pre.className = "code-block";
           pre.textContent = block.content;
           const buttonContainer = document.createElement("div");
           buttonContainer.className = "code-block-buttons";
+          
           const copyBtn = document.createElement("button");
           copyBtn.className = "copy-btn";
           copyBtn.textContent = "📋 کپی";
           copyBtn.onclick = () => {
-            navigator.clipboard.writeText(block.content);
-            copyBtn.textContent = "✅ کپی شد!";
-            setTimeout(() => copyBtn.textContent = "📋 کپی", 2000);
+            navigator.clipboard.writeText(block.content).then(() => {
+              copyBtn.textContent = "✅ کپی شد!";
+              setTimeout(() => copyBtn.textContent = "📋 کپی", 2000);
+            }).catch(err => console.error('Copy failed:', err));
           };
           buttonContainer.appendChild(copyBtn);
 
@@ -805,8 +845,15 @@
             buttonContainer.appendChild(previewBtn);
           }
 
+          const downloadBtn = document.createElement("button");
+          downloadBtn.className = "download-btn";
+          downloadBtn.textContent = translations[currentLanguage].download;
+          downloadBtn.onclick = () => downloadCode(block.content, block.language);
+          buttonContainer.appendChild(downloadBtn);
+
           pre.appendChild(buttonContainer);
           chat.appendChild(pre);
+          await delay(300);
         }
       }
 
@@ -814,11 +861,30 @@
       if (role === "bot") {
         setInputState(true);
         isTyping = false;
-        document.getElementById("stopBtn").style.display = "none";
+        const stopBtn = document.getElementById("stopBtn");
+        if (stopBtn) stopBtn.style.display = "none";
         if (speechEnabled) {
           speakText(text);
         }
       }
+    }
+
+    function downloadCode(content, language) {
+      if (!window.Blob || !window.URL) {
+        console.error('Blob or URL API not supported');
+        appendMessage("bot", `<div class="error-message">مرورگر شما از دانلود فایل پشتیبانی نمی‌کند.</div>`, true);
+        return;
+      }
+      const extension = language === "html" ? "html" : language === "javascript" ? "js" : language === "python" ? "py" : "txt";
+      const blob = new Blob([content], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `code.${extension}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
 
     function splitByCodeBlocks(text) {
@@ -843,23 +909,38 @@
 
     function stopTyping() {
       isTyping = false;
-      document.getElementById("stopBtn").style.display = "none";
+      const stopBtn = document.getElementById("stopBtn");
+      if (stopBtn) stopBtn.style.display = "none";
       setInputState(true);
-      document.getElementById("typingIndicator").style.display = "none";
+      const typingIndicator = document.getElementById("typingIndicator");
+      if (typingIndicator) typingIndicator.style.display = "none";
       window.speechSynthesis.cancel();
     }
 
     function openPreviewModal(htmlContent) {
-      const iframe = document.getElementById("previewIframe");
-      iframe.srcdoc = htmlContent;
-      document.getElementById("previewModal").style.display = "block";
-      document.getElementById("overlay").style.display = "block";
+      const previewModal = document.getElementById("previewModal");
+      const previewIframe = document.getElementById("previewIframe");
+      const overlay = document.getElementById("overlay");
+      if (previewModal && previewIframe && overlay) {
+        previewIframe.srcdoc = htmlContent;
+        previewModal.style.display = "block";
+        overlay.style.display = "block";
+      } else {
+        console.error('Preview modal elements not found');
+      }
     }
 
     function closePreviewModal() {
-      document.getElementById("previewModal").style.display = "none";
-      document.getElementById("overlay").style.display = "none";
-      document.getElementById("previewIframe").srcdoc = "";
+      const previewModal = document.getElementById("previewModal");
+      const previewIframe = document.getElementById("previewIframe");
+      const overlay = document.getElementById("overlay");
+      if (previewModal && previewIframe && overlay) {
+        previewModal.style.display = "none";
+        overlay.style.display = "none";
+        previewIframe.srcdoc = "";
+      } else {
+        console.error('Preview modal elements not found');
+      }
     }
 
     function encryptData(data) {
@@ -879,7 +960,7 @@
     function saveHistory() {
       const compressed = LZString.compressToUTF16(JSON.stringify(conversations));
       localStorage.setItem("radbot-conversations", encryptData(compressed));
-      if (document.getElementById("cloudSync").checked) {
+      if (document.getElementById("cloudSync")?.checked) {
         syncToCloud();
       }
     }
@@ -916,6 +997,10 @@
 
     function updateSidebar(searchQuery = '') {
       const historyDiv = document.getElementById("historyContent");
+      if (!historyDiv) {
+        console.error('History content element not found');
+        return;
+      }
       historyDiv.innerHTML = '';
       conversations.forEach(conv => {
         const userMessages = conv.messages.filter(msg => msg.role === 'user' && (!searchQuery || msg.content.includes(searchQuery)));
@@ -935,6 +1020,10 @@
 
     function showConversation(convId) {
       const chat = document.getElementById("chat");
+      if (!chat) {
+        console.error('Chat element not found');
+        return;
+      }
       chat.innerHTML = '';
       const conv = conversations.find(c => c.id === convId);
       if (conv) {
@@ -949,7 +1038,8 @@
       const newConv = { id: Date.now(), messages: [] };
       conversations.unshift(newConv);
       currentConversationId = newConv.id;
-      document.getElementById("chat").innerHTML = '';
+      const chat = document.getElementById("chat");
+      if (chat) chat.innerHTML = '';
       updateSidebar();
       limitHistory();
     }
@@ -958,7 +1048,8 @@
       if (confirm(translations[currentLanguage].clearHistory + "؟")) {
         conversations = [{ id: Date.now(), messages: [] }];
         currentConversationId = conversations[0].id;
-        document.getElementById("chat").innerHTML = '';
+        const chat = document.getElementById("chat");
+        if (chat) chat.innerHTML = '';
         updateSidebar();
         saveHistory();
       }
@@ -974,8 +1065,9 @@
       if (navigator.share) {
         navigator.share(shareData).catch(err => console.error('Share failed:', err));
       } else {
-        navigator.clipboard.writeText(shareData.text);
-        alert('مکالمه در کلیپ‌بورد کپی شد!');
+        navigator.clipboard.writeText(shareData.text).then(() => {
+          alert('مکالمه در کلیپ‌بورد کپی شد!');
+        }).catch(err => console.error('Copy failed:', err));
       }
     }
 
@@ -991,21 +1083,39 @@
     }
 
     function openEditModal(text, index) {
-      editingMessageIndex = parseInt(index);
-      document.getElementById("editInput").value = text;
-      document.getElementById("editModal").style.display = "block";
-      document.getElementById("overlay").style.display = "block";
+      const editModal = document.getElementById("editModal");
+      const editInput = document.getElementById("editInput");
+      const overlay = document.getElementById("overlay");
+      if (editModal && editInput && overlay) {
+        editingMessageIndex = parseInt(index);
+        editInput.value = text;
+        editModal.style.display = "block";
+        overlay.style.display = "block";
+      } else {
+        console.error('Edit modal elements not found');
+      }
     }
 
     function closeEditModal() {
-      editingMessageIndex = null;
-      document.getElementById("editModal").style.display = "none";
-      document.getElementById("overlay").style.display = "none";
+      const editModal = document.getElementById("editModal");
+      const overlay = document.getElementById("overlay");
+      if (editModal && overlay) {
+        editingMessageIndex = null;
+        editModal.style.display = "none";
+        overlay.style.display = "none";
+      } else {
+        console.error('Edit modal elements not found');
+      }
     }
 
     function saveEditedMessage() {
       if (editingMessageIndex === null) return;
-      const newText = document.getElementById("editInput").value.trim();
+      const editInput = document.getElementById("editInput");
+      if (!editInput) {
+        console.error('Edit input element not found');
+        return;
+      }
+      const newText = editInput.value.trim();
       if (!newText) return;
 
       const conv = getCurrentConversation();
@@ -1017,8 +1127,10 @@
     }
 
     async function sendToGPT(message) {
-      document.getElementById("loading").style.display = 'block';
-      document.getElementById("typingIndicator").style.display = 'block';
+      const loading = document.getElementById("loading");
+      const typingIndicator = document.getElementById("typingIndicator");
+      if (loading) loading.style.display = 'block';
+      if (typingIndicator) typingIndicator.style.display = 'block';
       setInputState(false);
       const conv = getCurrentConversation();
       conv.messages.push({ role: "user", content: message, timestamp: new Date().toLocaleString('fa-IR') });
@@ -1028,6 +1140,8 @@
         conv.messages.push({ role: "assistant", content: reply, timestamp: new Date().toLocaleString('fa-IR') });
         await appendMessage("bot", reply);
         updateDocument();
+        if (loading) loading.style.display = 'none';
+        if (typingIndicator) typingIndicator.style.display = 'none';
         return;
       }
 
@@ -1042,15 +1156,7 @@
         }
 
         if (!navigator.onLine) {
-          if (offlineModel) {
-            const { generated_text } = await offlineModel.generate({ text: message, max_length: 50 });
-            conv.messages.push({ role: "assistant", content: generated_text, timestamp: new Date().toLocaleString('fa-IR') });
-            await appendMessage("bot", translations[currentLanguage].offline + "\n\n" + generated_text);
-            updateDocument();
-            return;
-          } else {
-            throw new Error("اتصال به اینترنت قطع است و مدل آفلاین در دسترس نیست.");
-          }
+          throw new Error(translations[currentLanguage].offline);
         }
 
         const body = {
@@ -1069,7 +1175,7 @@
 
         if (!res.ok) {
           const errorText = await res.text();
-          throw new Error(`خطای API: ${res.status} - ${errorText || "اعتبار شما تمام شد. لطفاً اعتبار خود را شارژ کنید."}`);
+          throw new Error(`خطای API: ${res.status} - ${errorText || "اعتبار شما تمام شد. لطفاً اعتبار خود را شارژ کنید یا اتصال اینترنت را بررسی کنید."}`);
         }
 
         const data = await res.json();
@@ -1086,10 +1192,11 @@
         console.error('API error:', err);
         appendMessage("bot", `<div class="error-message">${translations[currentLanguage].error}: ${err.message}</div>`);
       } finally {
-        document.getElementById("loading").style.display = 'none';
-        document.getElementById("typingIndicator").style.display = 'none';
+        if (loading) loading.style.display = 'none';
+        if (typingIndicator) typingIndicator.style.display = 'none';
         if (!isTyping) {
-          document.getElementById("stopBtn").style.display = "none";
+          const stopBtn = document.getElementById("stopBtn");
+          if (stopBtn) stopBtn.style.display = "none";
         }
       }
     }
@@ -1103,6 +1210,10 @@
 
     function sendMessage() {
       const input = document.getElementById("input");
+      if (!input) {
+        console.error('Input element not found');
+        return;
+      }
       const message = input.value.trim();
       if (!message) return;
       appendMessage("user", message);
@@ -1112,6 +1223,10 @@
 
     function showSuggestions() {
       const suggestionsDiv = document.getElementById("suggestions");
+      if (!suggestionsDiv) {
+        console.error('Suggestions element not found');
+        return;
+      }
       suggestionsDiv.innerHTML = '';
       const conv = getCurrentConversation();
       const lastMessage = conv.messages?.slice(-1)[0]?.content || '';
@@ -1127,8 +1242,11 @@
         btn.className = "suggestion";
         btn.textContent = s;
         btn.onclick = () => {
-          document.getElementById("input").value = s;
-          sendMessage();
+          const input = document.getElementById("input");
+          if (input) {
+            input.value = s;
+            sendMessage();
+          }
         };
         suggestionsDiv.appendChild(btn);
       });
@@ -1136,16 +1254,21 @@
 
     function applyTheme(theme, accentColor = null, bgColor = null) {
       document.body.classList.remove("light-theme", "custom-theme");
+      const themeToggle = document.getElementById("themeToggle");
+      if (!themeToggle) {
+        console.error('Theme toggle button not found');
+        return;
+      }
       if (theme === 'light') {
         document.body.classList.add("light-theme");
-        document.getElementById("themeToggle").innerHTML = '<i class="fas fa-moon"></i>';
+        themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
       } else if (theme === 'custom' && accentColor && bgColor) {
         document.body.classList.add("custom-theme");
         document.documentElement.style.setProperty('--accent-color', accentColor);
         document.documentElement.style.setProperty('--bg-color', bgColor);
-        document.getElementById("themeToggle").innerHTML = '<i class="fas fa-paint-brush"></i>';
+        themeToggle.innerHTML = '<i class="fas fa-paint-brush"></i>';
       } else {
-        document.getElementById("themeToggle").innerHTML = '<i class="fas fa-sun"></i>';
+        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
       }
       localStorage.setItem("radbot-theme", theme);
       if (accentColor) localStorage.setItem("radbot-accent", accentColor);
@@ -1155,63 +1278,113 @@
     function updateLanguage(lang) {
       currentLanguage = lang;
       localStorage.setItem('radbot-language', lang);
-      document.getElementById("input").placeholder = translations[currentLanguage].placeholder;
-      document.getElementById("historySidebar").querySelector("h3").textContent = `🗂 ${translations[currentLanguage].history}`;
-      document.getElementById("historySearch").placeholder = translations[currentLanguage].searchPlaceholder;
-      document.getElementById("loading").innerHTML = `${translations[currentLanguage].processing}<span class="typing">...</span>`;
-      document.getElementById("typingIndicator").innerHTML = `${translations[currentLanguage].typing}<span class="typing">...</span>`;
-      document.querySelector(".conversation-controls button:first-child").innerHTML = `<i class="fas fa-plus"></i> ${translations[currentLanguage].newConversation}`;
-      document.querySelector(".conversation-controls button:nth-child(2)").innerHTML = `<i class="fas fa-trash"></i> ${translations[currentLanguage].clearHistory}`;
-      document.querySelector(".conversation-controls button:last-child").innerHTML = `<i class="fas fa-share"></i> ${translations[currentLanguage].share}`;
-      document.getElementById("settingsModal").querySelector("h3").textContent = translations[currentLanguage].settings;
-      document.getElementById("settingsModal").querySelectorAll("label")[0].textContent = translations[currentLanguage].theme;
-      document.getElementById("settingsModal").querySelectorAll("label")[1].textContent = translations[currentLanguage].customAccent;
-      document.getElementById("settingsModal").querySelectorAll("label")[2].textContent = translations[currentLanguage].customBg;
-      document.getElementById("settingsModal").querySelectorAll("label")[3].textContent = translations[currentLanguage].language;
-      document.getElementById("settingsModal").querySelectorAll("label")[4].textContent = translations[currentLanguage].cloudSync;
-      document.getElementById("settingsModal").querySelectorAll("label")[5].textContent = translations[currentLanguage].speechEnabled;
-      document.getElementById("settingsModal").querySelectorAll("button")[0].textContent = translations[currentLanguage].save;
-      document.getElementById("settingsModal").querySelectorAll("button")[1].textContent = translations[currentLanguage].close;
-      document.getElementById("editModal").querySelector("h3").textContent = translations[currentLanguage].edit;
-      document.getElementById("editModal").querySelectorAll("button")[0].textContent = translations[currentLanguage].save;
-      document.getElementById("editModal").querySelectorAll("button")[1].textContent = translations[currentLanguage].close;
-      document.getElementById("previewModal").querySelector("h3").textContent = translations[currentLanguage].preview;
-      document.getElementById("previewModal").querySelector("button").textContent = translations[currentLanguage].close;
+      const input = document.getElementById("input");
+      const historySidebar = document.getElementById("historySidebar");
+      const historySearch = document.getElementById("historySearch");
+      const loading = document.getElementById("loading");
+      const typingIndicator = document.getElementById("typingIndicator");
+      const conversationControls = document.querySelector(".conversation-controls");
+      const settingsModal = document.getElementById("settingsModal");
+      const editModal = document.getElementById("editModal");
+      const previewModal = document.getElementById("previewModal");
+
+      if (input) input.placeholder = translations[currentLanguage].placeholder;
+      if (historySidebar) historySidebar.querySelector("h3").textContent = `🗂 ${translations[currentLanguage].history}`;
+      if (historySearch) historySearch.placeholder = translations[currentLanguage].searchPlaceholder;
+      if (loading) loading.innerHTML = `${translations[currentLanguage].processing}<span class="typing">...</span>`;
+      if (typingIndicator) typingIndicator.innerHTML = `${translations[currentLanguage].typing}<span class="typing">...</span>`;
+      if (conversationControls) {
+        conversationControls.querySelector("button:first-child").innerHTML = `<i class="fas fa-plus"></i> ${translations[currentLanguage].newConversation}`;
+        conversationControls.querySelector("button:nth-child(2)").innerHTML = `<i class="fas fa-trash"></i> ${translations[currentLanguage].clearHistory}`;
+        conversationControls.querySelector("button:last-child").innerHTML = `<i class="fas fa-share"></i> ${translations[currentLanguage].share}`;
+      }
+      if (settingsModal) {
+        settingsModal.querySelector("h3").textContent = translations[currentLanguage].settings;
+        settingsModal.querySelectorAll("label")[0].textContent = translations[currentLanguage].theme;
+        settingsModal.querySelectorAll("label")[1].textContent = translations[currentLanguage].customAccent;
+        settingsModal.querySelectorAll("label")[2].textContent = translations[currentLanguage].customBg;
+        settingsModal.querySelectorAll("label")[3].textContent = translations[currentLanguage].language;
+        settingsModal.querySelectorAll("label")[4].textContent = translations[currentLanguage].cloudSync;
+        settingsModal.querySelectorAll("label")[5].textContent = translations[currentLanguage].speechEnabled;
+        settingsModal.querySelectorAll("button")[0].textContent = translations[currentLanguage].save;
+        settingsModal.querySelectorAll("button")[1].textContent = translations[currentLanguage].close;
+      }
+      if (editModal) {
+        editModal.querySelector("h3").textContent = translations[currentLanguage].edit;
+        editModal.querySelectorAll("button")[0].textContent = translations[currentLanguage].save;
+        editModal.querySelectorAll("button")[1].textContent = translations[currentLanguage].close;
+      }
+      if (previewModal) {
+        previewModal.querySelector("h3").textContent = translations[currentLanguage].preview;
+        previewModal.querySelector("button").textContent = translations[currentLanguage].close;
+      }
     }
 
     function openSettings() {
-      document.getElementById("settingsModal").style.display = "block";
-      document.getElementById("overlay").style.display = "block";
-      document.getElementById("themeSelect").value = localStorage.getItem("radbot-theme") || "dark";
-      document.getElementById("customAccent").value = localStorage.getItem("radbot-accent") || "#00ffff";
-      document.getElementById("customBg").value = localStorage.getItem("radbot-bg") || "#121212";
-      document.getElementById("languageSelect").value = currentLanguage;
-      document.getElementById("cloudSync").checked = localStorage.getItem("radbot-cloud") === 'true';
-      document.getElementById("speechEnabled").checked = speechEnabled;
+      const settingsModal = document.getElementById("settingsModal");
+      const overlay = document.getElementById("overlay");
+      const themeSelect = document.getElementById("themeSelect");
+      const customAccent = document.getElementById("customAccent");
+      const customBg = document.getElementById("customBg");
+      const languageSelect = document.getElementById("languageSelect");
+      const cloudSync = document.getElementById("cloudSync");
+      const speechEnabledInput = document.getElementById("speechEnabled");
+      if (settingsModal && overlay && themeSelect && customAccent && customBg && languageSelect && cloudSync && speechEnabledInput) {
+        themeSelect.value = localStorage.getItem("radbot-theme") || "dark";
+        customAccent.value = localStorage.getItem("radbot-accent") || "#00ffff";
+        customBg.value = localStorage.getItem("radbot-bg") || "#121212";
+        languageSelect.value = currentLanguage;
+        cloudSync.checked = localStorage.getItem("radbot-cloud") === 'true';
+        speechEnabledInput.checked = speechEnabled;
+        settingsModal.style.display = "block";
+        overlay.style.display = "block";
+      } else {
+        console.error('Settings modal elements not found');
+      }
     }
 
     function closeSettings() {
-      document.getElementById("settingsModal").style.display = "none";
-      document.getElementById("overlay").style.display = "none";
+      const settingsModal = document.getElementById("settingsModal");
+      const overlay = document.getElementById("overlay");
+      if (settingsModal && overlay) {
+        settingsModal.style.display = "none";
+        overlay.style.display = "none";
+      } else {
+        console.error('Settings modal elements not found');
+      }
     }
 
     function saveSettings() {
-      const theme = document.getElementById("themeSelect").value;
-      const accentColor = document.getElementById("customAccent").value;
-      const bgColor = document.getElementById("customBg").value;
-      const language = document.getElementById("languageSelect").value;
-      const cloudSync = document.getElementById("cloudSync").checked;
-      speechEnabled = document.getElementById("speechEnabled").checked;
-      applyTheme(theme, accentColor, bgColor);
-      updateLanguage(language);
-      localStorage.setItem("radbot-cloud", cloudSync);
-      localStorage.setItem("radbot-speech", speechEnabled);
-      closeSettings();
+      const themeSelect = document.getElementById("themeSelect");
+      const customAccent = document.getElementById("customAccent");
+      const customBg = document.getElementById("customBg");
+      const languageSelect = document.getElementById("languageSelect");
+      const cloudSync = document.getElementById("cloudSync");
+      const speechEnabledInput = document.getElementById("speechEnabled");
+      if (themeSelect && customAccent && customBg && languageSelect && cloudSync && speechEnabledInput) {
+        const theme = themeSelect.value;
+        const accentColor = customAccent.value;
+        const bgColor = customBg.value;
+        const language = languageSelect.value;
+        const cloudSyncChecked = cloudSync.checked;
+        speechEnabled = speechEnabledInput.checked;
+        applyTheme(theme, accentColor, bgColor);
+        updateLanguage(language);
+        localStorage.setItem("radbot-cloud", cloudSyncChecked);
+        localStorage.setItem("radbot-speech", speechEnabled);
+        closeSettings();
+      } else {
+        console.error('Settings elements not found');
+      }
     }
 
     function enhanceTouchScroll() {
       const chat = document.getElementById("chat");
       const historySidebar = document.getElementById("historySidebar");
+      if (!chat || !historySidebar) {
+        console.error('Chat or history sidebar element not found');
+        return;
+      }
 
       function handleTouchMove(e, element) {
         const isScrollable = element.scrollHeight > element.clientHeight;
@@ -1240,31 +1413,34 @@
       historySidebar.addEventListener("touchmove", (e) => handleTouchMove(e, historySidebar));
     }
 
-    document.getElementById("input").addEventListener("keydown", function (e) {
+    document.getElementById("input")?.addEventListener("keydown", function (e) {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
       }
     });
 
-    document.getElementById("historySearch").addEventListener("input", function () {
+    document.getElementById("historySearch")?.addEventListener("input", function () {
       updateSidebar(this.value);
     });
 
-    document.getElementById("themeToggle").onclick = () => {
+    document.getElementById("themeToggle")?.onclick = () => {
       const currentTheme = document.body.classList.contains("light-theme") ? 'light' : document.body.classList.contains("custom-theme") ? 'custom' : 'dark';
       applyTheme(currentTheme === 'light' ? 'dark' : 'light');
     };
 
-    document.getElementById("overlay").onclick = () => {
+    document.getElementById("overlay")?.onclick = () => {
       closeSettings();
       closeEditModal();
       closePreviewModal();
     };
 
-    document.getElementById("fullscreenBtn").onclick = () => {
+    document.getElementById("fullscreenBtn")?.onclick = () => {
       document.body.classList.toggle("fullscreen");
-      document.getElementById("fullscreenBtn").innerHTML = document.body.classList.contains('fullscreen') ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
+      const fullscreenBtn = document.getElementById("fullscreenBtn");
+      if (fullscreenBtn) {
+        fullscreenBtn.innerHTML = document.body.classList.contains('fullscreen') ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
+      }
     };
 
     window.onload = () => {
