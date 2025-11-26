@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>چیکو طلا — کانال آپارات</title>
+
+  <!-- Google Font (you can change or remove) -->
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg1: #0f1724;
+      --bg2: #1b2838;
+      --card: rgba(255,255,255,0.06);
+      --accent: #ffd166;
+      --muted: rgba(255,255,255,0.75);
+      --glass: rgba(255,255,255,0.04);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:"Vazirmatn", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(255,209,102,0.06), transparent 6%),
+                  linear-gradient(135deg,var(--bg1), var(--bg2));
+      color: #fff;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px;
+    }
+
+    .container{
+      width:100%;
+      max-width:980px;
+      display:grid;
+      grid-template-columns: 1fr 420px;
+      gap:28px;
+      align-items:stretch;
+    }
+
+    /* Card */
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:16px;
+      padding:26px;
+      box-shadow: 0 10px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    /* Left: description + actions */
+    .hero{
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      justify-content:center;
+    }
+
+    .title{
+      display:flex;
+      gap:14px;
+      align-items:center;
+    }
+
+    .logo {
+      width:84px;
+      height:84px;
+      border-radius:18px;
+      background: linear-gradient(135deg,#ffd166,#ff9a66 60%);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+      transform: rotate(-6deg);
+    }
+
+    .logo svg{width:58px;height:58px;filter: drop-shadow(0 6px 10px rgba(0,0,0,0.28));}
+
+    h1{
+      margin:0;
+      font-size:20px;
+      letter-spacing:0.2px;
+    }
+    p.lead{
+      margin:0;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:15px;
+    }
+
+    /* speech bubble & controls */
+    .speech-wrap{
+      margin-top:6px;
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+
+    .speech{
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+      padding:14px 16px;
+      border-radius:12px;
+      max-width:640px;
+      font-size:15px;
+      color:var(--muted);
+      position:relative;
+      min-height:54px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    }
+    .speech::after{
+      content:"";
+      position:absolute;
+      left:14px;
+      bottom:-10px;
+      width:18px;height:18px;
+      transform:rotate(45deg);
+      background:inherit;
+      border-radius:3px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+
+    .controls{display:flex;gap:8px;align-items:center;}
+
+    .btn{
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border:1px solid rgba(255,255,255,0.05);
+      padding:10px 14px;
+      border-radius:10px;
+      cursor:pointer;
+      color:var(--muted);
+      font-weight:600;
+      transition: transform .18s ease, box-shadow .18s;
+    }
+    .btn:active{transform:translateY(2px)}
+    .btn-primary{
+      background: linear-gradient(90deg,#ffd166,#ff9a66);
+      color:#0a0a0a;
+      box-shadow: 0 8px 30px rgba(255,157,66,0.14);
+    }
+
+    /* Right: visual bird stage */
+    .stage{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:18px;
+    }
+
+    .bird-wrap{
+      width:100%;
+      max-width:360px;
+      height:260px;
+      border-radius:14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.00));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      overflow:visible;
+      border: 1px solid rgba(255,255,255,0.03);
+    }
+
+    /* floating effect */
+    .floating{
+      animation: floatY 4.6s ease-in-out infinite;
+    }
+    @keyframes floatY{
+      0%{ transform: translateY(0) }
+      50%{ transform: translateY(-10px) rotate(-1deg) }
+      100%{ transform: translateY(0) }
+    }
+
+    /* wing flap */
+    .wing{
+      transform-origin: 22px 22px;
+      animation: flap 0.65s ease-in-out infinite;
+    }
+    @keyframes flap{
+      0%{ transform: rotate(8deg) }
+      50%{ transform: rotate(-22deg) }
+      100%{ transform: rotate(8deg) }
+    }
+
+    /* eye blink */
+    .eye{ animation: blink 4.2s step-end infinite; transform-origin:center center;}
+    @keyframes blink{
+      0%,94%{ transform: scaleY(1) }
+      96%,100%{ transform: scaleY(0.02) }
+    }
+
+    /* small sparkles */
+    .sparkle{
+      position:absolute;
+      width:10px;height:10px;border-radius:50%;
+      background:rgba(255,241,179,0.9);
+      filter:blur(6px);
+      opacity:.12;
+      animation: sparkle 5s linear infinite;
+    }
+    .sparkle.s1{right:12%;top:8%;animation-delay:0s}
+    .sparkle.s2{left:18%;top:6%;animation-delay:1.2s}
+    .sparkle.s3{left:6%;bottom:6%;animation-delay:2.4s}
+    @keyframes sparkle{
+      0%{transform:scale(.7) translateY(0);opacity:.12}
+      50%{transform:scale(1.3) translateY(-8px);opacity:.24}
+      100%{transform:scale(.9) translateY(0);opacity:.12}
+    }
+
+    /* typing dots for speech */
+    .typing{
+      display:inline-block;
+      width:46px;
+      text-align:left;
+    }
+    .dot{
+      display:inline-block;
+      width:8px;height:8px;border-radius:50%;
+      background:rgba(10,10,10,0.08);
+      margin:0 3px;
+      transform: translateY(0);
+      animation: bounce 1s infinite ease-in-out;
+    }
+    .dot:nth-child(1){animation-delay:0s}
+    .dot:nth-child(2){animation-delay:.15s}
+    .dot:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{
+      0%,80%,100%{ transform: translateY(0) }
+      40%{ transform: translateY(-6px) }
+    }
+
+    /* bottom caption */
+    .meta{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    /* responsive */
+    @media (max-width:920px){
+      .container{grid-template-columns:1fr; padding-bottom:20px}
+      .stage{order:-1}
+      .bird-wrap{height:220px}
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- LEFT -->
+    <div class="card hero" aria-live="polite">
+      <div class="title">
+        <div class="logo" aria-hidden="true">
+          <!-- stylized little bird (SVG) -->
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="چیکو طلا">
+            <g fill="none" stroke="rgba(0,0,0,0.08)" stroke-width="0">
+              <circle cx="32" cy="32" r="28" fill="#fff2d1" opacity=".95"/>
+            </g>
+            <g transform="translate(6,6)">
+              <path d="M18 8c6 0 12 6 12 12s-4 13-10 14c-6 1-10-5-12-10-2-5 0-16 10-16z" fill="#ffd166"/>
+              <path d="M26 18c0 5-6 8-10 8s-6-5-5-8c1-4 6-7 10-6s5 3 5 6z" fill="#fff"/>
+              <circle cx="20" cy="22" r="2.6" fill="#222"/>
+              <path d="M8 18c3 2 9 2 12 0" stroke="#ff9a66" stroke-width="1.6" stroke-linecap="round" fill="none" opacity=".6"/>
+            </g>
+          </svg>
+        </div>
+
+        <div>
+          <h1>چیکو طلا — عروس هلندی سخنگو</h1>
+          <div style="color:var(--muted);font-size:13px;margin-top:6px">کانال رسمی ویدیوهای بامزه و آموزشی</div>
+        </div>
+      </div>
+
+      <!-- Persian description (۴-۵ خط) -->
+      <p class="lead" style="margin-top:12px">
+        چیکو طلا یک عروس هلندی فوق‌العاده باهوش و بامزه است که توانایی صحبت کردن دارد و لحظه‌های خنده‌دار و شیرینی می‌سازد.
+        در این کانال، ویدیوهای جذاب از آموزش‌ها، حرف زدن‌ها، بازیگوشی‌ها و ماجراجویی‌های روزمرهٔ چیکو طلا را خواهید دید.
+        اگر عاشق پرنده‌های خانگی هستید، اینجا بهترین مکان برای دیدن رفتارها و توانایی‌های خاص چیکو است.
+        همراه ما باشید تا کلی اتفاق بامزه و صحنه‌های دوست‌داشتنی را با هم ببینیم!
+      </p>
+
+      <!-- speech + controls -->
+      <div class="speech-wrap">
+        <div class="speech" id="speechBox" role="status">
+          <div style="min-width:46px;">
+            <!-- small avatar in bubble -->
+            <svg width="44" height="44" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <g transform="translate(6,6)">
+                <circle cx="26" cy="26" r="22" fill="#fff6df"/>
+                <path class="wing" d="M18 20c5-2 10-1 12 3" stroke="#ffb86b" stroke-width="3" stroke-linecap="round" fill="none"/>
+                <circle class="eye" cx="20" cy="22" r="2.6" fill="#222"/>
+              </g>
+            </svg>
+          </div>
+
+          <div id="speechText" style="flex:1;">
+            <strong style="display:block;color:#fff;margin-bottom:6px">چیکو طلا میگه:</strong>
+            <span id="lineText" style="color:var(--muted)"></span>
+          </div>
+
+          <div class="controls" style="margin-left:8px;">
+            <button class="btn" id="prevBtn" title="قبلی">‹</button>
+            <button class="btn btn-primary" id="speakBtn" title="پخش صحبت چیکو">پخش</button>
+            <button class="btn" id="nextBtn" title="بعدی">›</button>
+          </div>
+        </div>
+
+        <div class="meta" style="width:100%;">
+          <div>آدرس: <strong style="color:var(--accent)">https://avage.ir</strong></div>
+          <div>عضو شو و از ویدیوهای تازه باخبر شو!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: animated bird stage -->
+    <div class="card stage" aria-hidden="false">
+      <div class="bird-wrap" role="img" aria-label="عروس هلندی چیکو طلا">
+        <!-- Sparkles -->
+        <div class="sparkle s1"></div>
+        <div class="sparkle s2"></div>
+        <div class="sparkle s3"></div>
+
+        <!-- Animated SVG Bird (CSS-driven) -->
+        <svg class="floating" width="320" height="220" viewBox="0 0 180 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- branch -->
+          <g transform="translate(0,78)">
+            <rect x="6" y="6" width="140" height="10" rx="5" fill="#3a3f46" opacity=".12"/>
+          </g>
+
+          <!-- bird group -->
+          <g transform="translate(60,18)" id="bird">
+            <!-- body -->
+            <ellipse cx="40" cy="46" rx="34" ry="28" fill="#ffd166"/>
+            <!-- cheek -->
+            <circle cx="66" cy="46" r="7" fill="#ff9a99" opacity=".95"/>
+            <!-- wing (animated) -->
+            <g class="wing" transform="translate(18,26)">
+              <path d="M0 4c12-8 28-6 38 2c-2 10-14 18-28 14C6 28 2 16 0 4z" fill="#ffcc66"/>
+            </g>
+            <!-- tail -->
+            <path d="M6 54c-6 6-2 18 10 18c-2-8 4-18 10-22" fill="#ffb86b" opacity=".92" transform="translate(-2,6)"/>
+            <!-- head -->
+            <g transform="translate(6,0)">
+              <circle cx="34" cy="18" r="18" fill="#fff5b8"/>
+              <path d="M30 2c6-6 16-6 22 0c-6 6-5 13-9 16c-3 2-9 4-13-2c-3-5 0-12 0-14z" fill="#ffd166"/>
+              <!-- eye (blinking) -->
+              <ellipse class="eye" cx="38" cy="18" rx="3" ry="3" fill="#111"/>
+              <!-- beak -->
+              <path d="M46 24c6 2 6 6 0 8c-6 2-12-4-8-6c3-2 5-2 8-2z" fill="#ff9a66"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <div style="text-align:center;color:var(--muted);font-size:13px">
+        گالری لحظه‌ها — هر هفته ویدیوهای جدید
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Lines that the bird will "say"
+    const lines = [
+      "سلام! من چیکو طلا هستم 🐦✨",
+      "تو ویدیوهای من دنبال حرف زدن و بازیگوشی بگرد!",
+      "آموزش نکات نگهداری و تربیت عروس هلندی داریم.",
+      "وقتی ویدیو جدید می‌ذاریم، خبرت می‌کنیم — حتما عضو شو!"
+    ];
+
+    const lineText = document.getElementById('lineText');
+    const speakBtn = document.getElementById('speakBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+
+    let idx = 0;
+    let typingTimer = null;
+
+    function typeLine(text, cb) {
+      clearInterval(typingTimer);
+      lineText.textContent = '';
+      let i = 0;
+      typingTimer = setInterval(() => {
+        lineText.textContent = text.slice(0, ++i);
+        if (i >= text.length) {
+          clearInterval(typingTimer);
+          if (cb) cb();
+        }
+      }, 28);
+    }
+
+    function speakCurrent() {
+      // animate speech: type + "play" effect
+      speakBtn.textContent = "در حال پخش...";
+      speakBtn.disabled = true;
+      typeLine(lines[idx], () => {
+        // simulate speech duration
+        setTimeout(() => {
+          speakBtn.textContent = "پخش";
+          speakBtn.disabled = false;
+        }, Math.max(900, lines[idx].length * 55));
+      });
+
+      // optional: use Web Speech API if available (for fun)
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(lines[idx]);
+          // speak Persian if available
+          utter.lang = 'fa-IR';
+          utter.rate = 0.95;
+          window.speechSynthesis.speak(utter);
+        } catch(e) { /* ignore */ }
+      }
+    }
+
+    speakBtn.addEventListener('click', speakCurrent);
+    prevBtn.addEventListener('click', () => {
+      idx = (idx - 1 + lines.length) % lines.length;
+      typeLine(lines[idx]);
+    });
+    nextBtn.addEventListener('click', () => {
+      idx = (idx + 1) % lines.length;
+      typeLine(lines[idx]);
+    });
+
+    // auto-type the first line on load
+    window.addEventListener('DOMContentLoaded', () => {
+      typeLine(lines[idx]);
+    });
+
+    // Accessibility: stop speech when user leaves page
+    window.addEventListener('pagehide', () => {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    });
+  </script>
+</body>
+                                  </html>
